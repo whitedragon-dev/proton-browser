@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline';">
+    <title>Proton Browser</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            height: 100%;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f4f6f9;
+            color: #1f2430;
+            overflow: hidden;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 12px;
+            overflow: hidden;
+        }
+
+        .browser-frame {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 12px 34px rgba(30,40,60,0.12);
+            border: 1px solid #e2e6ec;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .titlebar {
+            background: #ffffff;
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid #e9ecf1;
+            flex-shrink: 0;
+            -webkit-app-region: drag;
+        }
+        .dot { width: 11px; height: 11px; border-radius: 50%; }
+        .dot.red { background: #f0605f; }
+        .dot.yellow { background: #f0b94d; }
+        .dot.green { background: #4cbf6b; }
+        .titlebar-label {
+            margin-left: 10px;
+            font-size: 12px;
+            color: #7a8494;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        #tab-bar {
+            background: #f8f9fb;
+            padding: 6px 8px 0 8px;
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            border-bottom: 1px solid #e9ecf1;
+            flex-shrink: 0;
+            overflow-x: auto;
+            min-height: 36px;
+        }
+        #tab-bar::-webkit-scrollbar { height: 0; }
+
+        .tab {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #eef1f6;
+            padding: 5px 10px 5px 12px;
+            border-radius: 8px 8px 0 0;
+            font-size: 12px;
+            color: #495166;
+            cursor: pointer;
+            min-width: 80px;
+            max-width: 180px;
+            flex-shrink: 0;
+            border: none;
+            transition: background 0.15s;
+        }
+        .tab:hover { background: #e2e6ec; }
+        .tab.active {
+            background: #ffffff;
+            color: #1f2430;
+            font-weight: 500;
+            box-shadow: 0 -2px 4px rgba(0,0,0,0.03);
+        }
+        .tab-title {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 11.5px;
+        }
+        .tab-close {
+            background: none;
+            border: none;
+            font-size: 14px;
+            color: #9aa2b1;
+            cursor: pointer;
+            padding: 0 2px;
+            border-radius: 3px;
+            line-height: 1;
+        }
+        .tab-close:hover {
+            color: #1f2430;
+            background: rgba(0,0,0,0.06);
+        }
+        .tab-loading {
+            width: 12px;
+            height: 12px;
+            border: 2px solid #dde2e9;
+            border-top: 2px solid #2f6fed;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            flex-shrink: 0;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        #new-tab-btn {
+            background: none;
+            border: none;
+            font-size: 18px;
+            color: #9aa2b1;
+            cursor: pointer;
+            padding: 0 8px;
+            border-radius: 4px;
+            transition: background 0.15s;
+            flex-shrink: 0;
+            height: 26px;
+            display: flex;
+            align-items: center;
+        }
+        #new-tab-btn:hover {
+            background: #e2e6ec;
+            color: #1f2430;
+        }
+
+        .addressbar-row {
+            background: #ffffff;
+            padding: 8px 14px;
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid #e9ecf1;
+            flex-shrink: 0;
+        }
+        .addressbar {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            background: #f4f6f9;
+            border: 1px solid #dde2e9;
+            border-radius: 8px;
+            padding: 0 12px;
+            transition: border-color 0.2s;
+        }
+        .addressbar:focus-within {
+            border-color: #2f6fed;
+            background: #ffffff;
+        }
+        .addressbar svg { flex-shrink: 0; opacity: 0.45; }
+        .addressbar input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #1f2430;
+            font-size: 13px;
+            padding: 8px 10px;
+        }
+        .addressbar input::placeholder { color: #9aa2b1; }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            font-size: 18px;
+            color: #7a8494;
+            cursor: pointer;
+            padding: 4px 10px;
+            border-radius: 6px;
+            transition: background 0.15s, opacity 0.15s;
+        }
+        .nav-btn:hover { background: #f4f6f9; color: #1f2430; }
+        .nav-btn:disabled {
+            opacity: 0.3;
+            cursor: default;
+        }
+
+        .go-btn {
+            background: #2f6fed;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 0 20px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+            flex-shrink: 0;
+        }
+        .go-btn:hover { background: #2559c9; }
+
+        .shortcuts-row {
+            background: #ffffff;
+            padding: 6px 14px 10px 14px;
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            border-bottom: 1px solid #e9ecf1;
+            flex-shrink: 0;
+        }
+        .shortcut {
+            background: #f4f6f9;
+            border: 1px solid #dde2e9;
+            border-radius: 6px;
+            padding: 5px 12px;
+            font-size: 11.5px;
+            color: #495166;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .shortcut:hover {
+            background: #eef1f6;
+            color: #1f2430;
+        }
+
+        #content-area {
+            flex: 1;
+            position: relative;
+            background: transparent;
+            overflow: hidden;
+            min-height: 50px;
+        }
+
+        #empty-state {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #9aa2b1;
+            padding: 20px;
+        }
+        #empty-state.visible { display: flex; }
+        #empty-state span {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+        #empty-state p {
+            font-size: 14px;
+            color: #b0b8c6;
+        }
+        #empty-state p strong {
+            color: #7a8494;
+            font-weight: 600;
+        }
+
+        .footer-note {
+            margin-top: 8px;
+            font-size: 11px;
+            color: #a0a8b6;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 600px) {
+            body { padding: 6px; }
+            .tab { min-width: 60px; max-width: 120px; font-size: 10px; }
+            .addressbar input { font-size: 12px; padding: 6px 8px; }
+            .go-btn { padding: 0 14px; font-size: 12px; }
+            .nav-btn { font-size: 16px; padding: 2px 6px; }
+            .shortcut { font-size: 10px; padding: 4px 8px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="browser-frame">
+    <div class="titlebar">
+        <div class="dot red"></div>
+        <div class="dot yellow"></div>
+        <div class="dot green"></div>
+        <div class="titlebar-label">⚡ Proton</div>
+    </div>
+
+    <div id="tab-bar">
+        <button id="new-tab-btn" title="New Tab (Ctrl+T)">+</button>
+    </div>
+
+    <div class="addressbar-row">
+        <button class="nav-btn" id="back-btn" title="Back">←</button>
+        <button class="nav-btn" id="forward-btn" title="Forward">→</button>
+        <button class="nav-btn" id="reload-btn" title="Reload">⟳</button>
+        <div class="addressbar">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                <circle cx="11" cy="11" r="7" stroke="#dfe3ea" stroke-width="2"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65" stroke="#dfe3ea" stroke-width="2"/>
+            </svg>
+            <input type="text" id="url-bar" placeholder="Enter URL or search..." spellcheck="false" autofocus>
+        </div>
+        <button id="go-btn" class="go-btn">Go</button>
+    </div>
+
+    <div class="shortcuts-row">
+        <div class="shortcut" data-url="https://google.com">Google</div>
+        <div class="shortcut" data-url="https://github.com">GitHub</div>
+        <div class="shortcut" data-url="https://duckduckgo.com">DuckDuckGo</div>
+        <div class="shortcut" data-url="https://wikipedia.org">Wikipedia</div>
+    </div>
+
+    <div id="content-area">
+        <div id="empty-state" class="visible">
+            <span>🌐</span>
+            <p>Press <strong>Ctrl+T</strong> to open a new tab</p>
+        </div>
+    </div>
+</div>
+
+<div class="footer-note">Proton Browser — Built with Electron</div>
+
+<script src="renderer.js"></script>
+</body>
+</html>

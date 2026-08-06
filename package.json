@@ -1,0 +1,13 @@
+{
+  "name": "proton-browser",
+  "version": "0.0.1",
+  "description": "Minimal Electron browser with WebContentsView",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --enable-logging"
+  },
+  "devDependencies": {
+    "electron": "^34.0.0"
+  }
+}
