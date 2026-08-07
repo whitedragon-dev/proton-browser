@@ -2,10 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 console.log('🔌 Preload script loaded');
 
-// Expose protected methods that allow the renderer process to use
-// the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('electronAPI', {
-  // Tab management
   createTab: () => {
     console.log('📞 IPC: createTab called');
     return ipcRenderer.invoke('tab:create');
@@ -18,8 +15,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     console.log('📞 IPC: switchTab called', id);
     return ipcRenderer.invoke('tab:switch', id);
   },
-
-  // Navigation
   navigate: (id, url) => {
     console.log('📞 IPC: navigate called', id, url);
     return ipcRenderer.invoke('navigate', id, url);
@@ -36,8 +31,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     console.log('📞 IPC: reload called', id);
     return ipcRenderer.invoke('reload', id);
   },
-
-  // Listeners
   onTabsUpdate: (callback) => {
     console.log('📞 IPC: onTabsUpdate listener registered');
     ipcRenderer.on('tabs-update', (_, data) => {

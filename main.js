@@ -31,7 +31,6 @@ function createWindow() {
   mainWindow.on('ready-to-show', () => {
     mainWindow.show();
     console.log('✅ Window ready');
-    // Only create one tab on startup
     if (tabs.length === 0) {
       createTab('about:blank', true);
     }
@@ -52,6 +51,14 @@ function createWindow() {
         });
       }
     }
+  });
+
+  app.on('web-contents-created', (_, contents) => {
+    if (contents.getType() === 'webview') return;
+    contents.on('new-window', (e, url) => {
+      e.preventDefault();
+      shell.openExternal(url);
+    });
   });
 }
 
@@ -114,19 +121,15 @@ function createTab(url, switchToNewTab = true) {
   });
 
   view.webContents.on('did-fail-load', () => {
-    tab.title = '⚠️ Error';
+    tab.title = '⚠ Error';
     tab.isLoading = false;
     sendTabUpdate();
   });
 
-  // ===== FIX: Open new windows as background tabs =====
+  // Open links as background tabs
   view.webContents.setWindowOpenHandler((details) => {
     console.log('🔗 New window requested (background):', details.url);
-    
-    // Open as a new tab in the background (don't switch to it)
     createTab(details.url, false);
-    
-    // Prevent opening in system browser
     return { action: 'deny' };
   });
 
@@ -135,7 +138,6 @@ function createTab(url, switchToNewTab = true) {
   if (switchToNewTab) {
     switchTab(id);
   } else {
-    // Background tab - hide it
     const [width, height] = mainWindow.getContentSize();
     tab.view.setBounds({
       x: 0,
@@ -183,10 +185,9 @@ function switchTab(id) {
 }
 
 function closeTab(id) {
-  console.log('🗑️ Closing tab:', id);
+  console.log('🗑 Closing tab:', id);
   
   if (tabs.length === 1) {
-    // Instead of closing the last tab, load blank
     const tab = tabs[0];
     tab.view.webContents.loadURL('about:blank');
     tab.url = 'about:blank';
@@ -214,10 +215,7 @@ function closeTab(id) {
 function navigateTo(id, url) {
   console.log('🌐 navigateTo called:', id, url);
   const tab = tabs.find(t => t.id === id);
-  if (!tab) {
-    console.log('❌ Tab not found:', id);
-    return;
-  }
+  if (!tab) return;
 
   let sanitizedUrl = url.trim();
   if (!sanitizedUrl) return;
@@ -229,16 +227,11 @@ function navigateTo(id, url) {
   try {
     const parsed = new URL(sanitizedUrl);
     const blocked = ['file:', 'javascript:', 'data:', 'chrome:', 'chrome-extension:'];
-    if (blocked.includes(parsed.protocol)) {
-      console.log('❌ Blocked protocol:', parsed.protocol);
-      return;
-    }
+    if (blocked.includes(parsed.protocol)) return;
   } catch {
     sanitizedUrl = 'https://duckduckgo.com/?q=' + encodeURIComponent(url);
   }
 
-  // CRITICAL FIX: Load in current tab, don't create new one
-  console.log('🌐 Loading in existing tab:', id, sanitizedUrl);
   tab.url = sanitizedUrl;
   tab.title = sanitizedUrl;
   tab.view.webContents.loadURL(sanitizedUrl).catch(() => {});
@@ -247,15 +240,15 @@ function navigateTo(id, url) {
 
 function goBack(id) {
   const tab = tabs.find(t => t.id === id);
-  if (tab && tab.view.webContents.canGoBack()) {
-    tab.view.webContents.goBack();
+  if (tab && tab.view.webContents.navigationHistory.canGoBack()) {
+    tab.view.webContents.navigationHistory.goBack();
   }
 }
 
 function goForward(id) {
   const tab = tabs.find(t => t.id === id);
-  if (tab && tab.view.webContents.canGoForward()) {
-    tab.view.webContents.goForward();
+  if (tab && tab.view.webContents.navigationHistory.canGoForward()) {
+    tab.view.webContents.navigationHistory.goForward();
   }
 }
 
@@ -281,40 +274,13 @@ function sendTabUpdate() {
 }
 
 // ===== IPC HANDLERS =====
-ipcMain.handle('tab:create', () => {
-  console.log('📞 IPC: createTab called from UI');
-  return createTab('about:blank', true);
-});
-
-ipcMain.handle('tab:close', (_, id) => {
-  console.log('📞 IPC: closeTab', id);
-  return closeTab(id);
-});
-
-ipcMain.handle('tab:switch', (_, id) => {
-  console.log('📞 IPC: switchTab', id);
-  return switchTab(id);
-});
-
-ipcMain.handle('navigate', (_, id, url) => {
-  console.log('📞 IPC: navigate called from renderer', id, url);
-  return navigateTo(id, url);
-});
-
-ipcMain.handle('go-back', (_, id) => {
-  console.log('📞 IPC: goBack', id);
-  return goBack(id);
-});
-
-ipcMain.handle('go-forward', (_, id) => {
-  console.log('📞 IPC: goForward', id);
-  return goForward(id);
-});
-
-ipcMain.handle('reload', (_, id) => {
-  console.log('📞 IPC: reload', id);
-  return reloadTab(id);
-});
+ipcMain.handle('tab:create', () => createTab('about:blank', true));
+ipcMain.handle('tab:close', (_, id) => closeTab(id));
+ipcMain.handle('tab:switch', (_, id) => switchTab(id));
+ipcMain.handle('navigate', (_, id, url) => navigateTo(id, url));
+ipcMain.handle('go-back', (_, id) => goBack(id));
+ipcMain.handle('go-forward', (_, id) => goForward(id));
+ipcMain.handle('reload', (_, id) => reloadTab(id));
 
 // ===== APP LIFECYCLE =====
 app.whenReady().then(createWindow);

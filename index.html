@@ -1,54 +1,70 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline';">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Proton Browser</title>
     <style>
+        /* ===== RESET & BASE ===== */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body {
             height: 100%;
-            font-family: 'Segoe UI', Arial, sans-serif;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
             background: #f4f6f9;
-            color: #1f2430;
+            color: #0c0c14;
             overflow: hidden;
         }
         body {
             display: flex;
             flex-direction: column;
             height: 100vh;
-            padding: 12px;
+            padding: 0; /* REMOVED padding */
             overflow: hidden;
         }
 
+        /* ===== BROWSER FRAME ===== */
         .browser-frame {
             width: 100%;
-            max-width: 1200px;
-            margin: 0 auto;
-            border-radius: 12px;
+            max-width: none; /* REMOVED max-width */
+            margin: 0; /* REMOVED margin */
+            border-radius: 0; /* REMOVED border-radius for full screen */
             overflow: hidden;
-            box-shadow: 0 12px 34px rgba(30,40,60,0.12);
-            border: 1px solid #e2e6ec;
+            box-shadow: none; /* REMOVED shadow for full screen */
+            border: none; /* REMOVED border for full screen */
             background: #ffffff;
             display: flex;
             flex-direction: column;
             flex-shrink: 0;
+            pointer-events: auto;
+            position: relative;
+            z-index: 1;
+            height: 100vh;
         }
 
+        /* ===== TITLE BAR (macOS style) ===== */
         .titlebar {
             background: #ffffff;
             padding: 10px 14px;
             display: flex;
             align-items: center;
             gap: 8px;
-            border-bottom: 1px solid #e9ecf1;
+            border-bottom: 1px solid #eae7e4;
             flex-shrink: 0;
             -webkit-app-region: drag;
+            pointer-events: auto;
+            position: relative;
+            z-index: 10;
         }
-        .dot { width: 11px; height: 11px; border-radius: 50%; }
-        .dot.red { background: #f0605f; }
-        .dot.yellow { background: #f0b94d; }
-        .dot.green { background: #4cbf6b; }
+        .titlebar-dot {
+            width: 11px;
+            height: 11px;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        .titlebar-dot.red { background: #f0605f; }
+        .titlebar-dot.yellow { background: #f0b94d; }
+        .titlebar-dot.green { background: #4cbf6b; }
         .titlebar-label {
             margin-left: 10px;
             font-size: 12px;
@@ -56,18 +72,27 @@
             display: flex;
             align-items: center;
             gap: 6px;
+            pointer-events: none;
+            font-weight: 500;
+        }
+        .titlebar-label .accent {
+            color: #6d4aff;
         }
 
+        /* ===== TAB BAR ===== */
         #tab-bar {
             background: #f8f9fb;
             padding: 6px 8px 0 8px;
             display: flex;
             align-items: center;
             gap: 2px;
-            border-bottom: 1px solid #e9ecf1;
+            border-bottom: 1px solid #eae7e4;
             flex-shrink: 0;
             overflow-x: auto;
             min-height: 36px;
+            pointer-events: auto;
+            position: relative;
+            z-index: 10;
         }
         #tab-bar::-webkit-scrollbar { height: 0; }
 
@@ -86,11 +111,14 @@
             flex-shrink: 0;
             border: none;
             transition: background 0.15s;
+            pointer-events: auto;
+            position: relative;
+            z-index: 10;
         }
         .tab:hover { background: #e2e6ec; }
         .tab.active {
             background: #ffffff;
-            color: #1f2430;
+            color: #0c0c14;
             font-weight: 500;
             box-shadow: 0 -2px 4px rgba(0,0,0,0.03);
         }
@@ -100,26 +128,31 @@
             text-overflow: ellipsis;
             white-space: nowrap;
             font-size: 11.5px;
+            pointer-events: none;
         }
         .tab-close {
             background: none;
             border: none;
             font-size: 14px;
-            color: #9aa2b1;
+            color: #8f8d8a;
             cursor: pointer;
             padding: 0 2px;
             border-radius: 3px;
             line-height: 1;
+            pointer-events: auto;
+            position: relative;
+            z-index: 11;
+            transition: color 0.15s, background 0.15s;
         }
         .tab-close:hover {
-            color: #1f2430;
+            color: #0c0c14;
             background: rgba(0,0,0,0.06);
         }
         .tab-loading {
             width: 12px;
             height: 12px;
             border: 2px solid #dde2e9;
-            border-top: 2px solid #2f6fed;
+            border-top: 2px solid #6d4aff;
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
             flex-shrink: 0;
@@ -130,42 +163,51 @@
             background: none;
             border: none;
             font-size: 18px;
-            color: #9aa2b1;
+            color: #8f8d8a;
             cursor: pointer;
             padding: 0 8px;
             border-radius: 4px;
-            transition: background 0.15s;
+            transition: background 0.15s, color 0.15s;
             flex-shrink: 0;
             height: 26px;
             display: flex;
             align-items: center;
+            pointer-events: auto;
+            position: relative;
+            z-index: 10;
         }
         #new-tab-btn:hover {
             background: #e2e6ec;
-            color: #1f2430;
+            color: #0c0c14;
         }
 
+        /* ===== ADDRESS BAR ===== */
         .addressbar-row {
             background: #ffffff;
             padding: 8px 14px;
             display: flex;
             gap: 8px;
-            border-bottom: 1px solid #e9ecf1;
+            border-bottom: 1px solid #eae7e4;
             flex-shrink: 0;
+            pointer-events: auto;
+            position: relative;
+            z-index: 10;
         }
         .addressbar {
             flex: 1;
             display: flex;
             align-items: center;
             background: #f4f6f9;
-            border: 1px solid #dde2e9;
+            border: 1px solid #d1cfcd;
             border-radius: 8px;
             padding: 0 12px;
-            transition: border-color 0.2s;
+            transition: border-color 0.2s, background 0.2s;
+            pointer-events: auto;
         }
         .addressbar:focus-within {
-            border-color: #2f6fed;
+            border-color: #6d4aff;
             background: #ffffff;
+            box-shadow: 0 0 0 3px rgba(109,74,255,0.2);
         }
         .addressbar svg { flex-shrink: 0; opacity: 0.45; }
         .addressbar input {
@@ -173,31 +215,39 @@
             background: transparent;
             border: none;
             outline: none;
-            color: #1f2430;
+            color: #0c0c14;
             font-size: 13px;
             padding: 8px 10px;
+            pointer-events: auto;
         }
-        .addressbar input::placeholder { color: #9aa2b1; }
+        .addressbar input::placeholder { color: #8f8d8a; }
 
         .nav-btn {
             background: none;
             border: none;
             font-size: 18px;
-            color: #7a8494;
+            color: #5c5958;
             cursor: pointer;
             padding: 4px 10px;
             border-radius: 6px;
-            transition: background 0.15s, opacity 0.15s;
+            transition: background 0.15s, color 0.15s, opacity 0.15s;
+            pointer-events: auto;
+            position: relative;
+            z-index: 10;
         }
-        .nav-btn:hover { background: #f4f6f9; color: #1f2430; }
+        .nav-btn:hover { background: #f4f6f9; color: #0c0c14; }
         .nav-btn:disabled {
             opacity: 0.3;
             cursor: default;
         }
+        .nav-btn:disabled:hover {
+            background: none;
+            color: #5c5958;
+        }
 
         .go-btn {
-            background: #2f6fed;
-            color: #fff;
+            background: #6d4aff;
+            color: #ffffff;
             border: none;
             border-radius: 8px;
             padding: 0 20px;
@@ -206,49 +256,64 @@
             cursor: pointer;
             transition: background 0.15s;
             flex-shrink: 0;
+            pointer-events: auto;
+            position: relative;
+            z-index: 10;
         }
-        .go-btn:hover { background: #2559c9; }
+        .go-btn:hover { background: #6243e6; }
+        .go-btn:active { background: #573bcc; }
 
+        /* ===== SHORTCUTS ROW ===== */
         .shortcuts-row {
             background: #ffffff;
             padding: 6px 14px 10px 14px;
             display: flex;
             gap: 6px;
             flex-wrap: wrap;
-            border-bottom: 1px solid #e9ecf1;
+            border-bottom: 1px solid #eae7e4;
             flex-shrink: 0;
+            pointer-events: auto;
+            position: relative;
+            z-index: 10;
         }
         .shortcut {
             background: #f4f6f9;
-            border: 1px solid #dde2e9;
+            border: 1px solid #d1cfcd;
             border-radius: 6px;
             padding: 5px 12px;
             font-size: 11.5px;
             color: #495166;
             cursor: pointer;
-            transition: background 0.15s;
+            transition: background 0.15s, color 0.15s;
+            pointer-events: auto;
+            position: relative;
+            z-index: 10;
         }
         .shortcut:hover {
             background: #eef1f6;
-            color: #1f2430;
+            color: #0c0c14;
         }
 
+        /* ===== CONTENT AREA ===== */
         #content-area {
             flex: 1;
             position: relative;
             background: transparent;
             overflow: hidden;
             min-height: 50px;
+            pointer-events: none;
         }
 
+        /* ===== EMPTY STATE ===== */
         #empty-state {
             display: none;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             height: 100%;
-            color: #9aa2b1;
+            color: #8f8d8a;
             padding: 20px;
+            pointer-events: none;
         }
         #empty-state.visible { display: flex; }
         #empty-state span {
@@ -260,46 +325,62 @@
             color: #b0b8c6;
         }
         #empty-state p strong {
-            color: #7a8494;
+            color: #5c5958;
             font-weight: 600;
         }
 
+        /* ===== FOOTER ===== */
         .footer-note {
-            margin-top: 8px;
+            margin-top: 0;
+            padding: 4px 0;
             font-size: 11px;
             color: #a0a8b6;
             text-align: center;
             flex-shrink: 0;
+            pointer-events: none;
+            letter-spacing: 0.3px;
+            background: #f4f6f9;
+        }
+        .footer-note .brand {
+            color: #6d4aff;
+            font-weight: 600;
         }
 
+        /* ===== RESPONSIVE ===== */
         @media (max-width: 600px) {
-            body { padding: 6px; }
+            body { padding: 0; }
             .tab { min-width: 60px; max-width: 120px; font-size: 10px; }
             .addressbar input { font-size: 12px; padding: 6px 8px; }
             .go-btn { padding: 0 14px; font-size: 12px; }
             .nav-btn { font-size: 16px; padding: 2px 6px; }
             .shortcut { font-size: 10px; padding: 4px 8px; }
+            .titlebar { padding: 6px 10px; }
+            .titlebar-dot { width: 9px; height: 9px; }
+            .titlebar-label { font-size: 10px; }
         }
     </style>
 </head>
 <body>
 
 <div class="browser-frame">
+    <!-- ===== TITLE BAR ===== -->
     <div class="titlebar">
-        <div class="dot red"></div>
-        <div class="dot yellow"></div>
-        <div class="dot green"></div>
-        <div class="titlebar-label">⚡ Proton</div>
+        <div class="titlebar-dot red"></div>
+        <div class="titlebar-dot yellow"></div>
+        <div class="titlebar-dot green"></div>
+        <div class="titlebar-label">⚡ <span class="accent">Proton</span> Browser</div>
     </div>
 
+    <!-- ===== TAB BAR ===== -->
     <div id="tab-bar">
         <button id="new-tab-btn" title="New Tab (Ctrl+T)">+</button>
     </div>
 
+    <!-- ===== ADDRESS BAR ===== -->
     <div class="addressbar-row">
         <button class="nav-btn" id="back-btn" title="Back">←</button>
         <button class="nav-btn" id="forward-btn" title="Forward">→</button>
-        <button class="nav-btn" id="reload-btn" title="Reload">⟳</button>
+        <button class="nav-btn" id="reload-btn" title="Reload">↻</button>
         <div class="addressbar">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
                 <circle cx="11" cy="11" r="7" stroke="#dfe3ea" stroke-width="2"/>
@@ -310,13 +391,16 @@
         <button id="go-btn" class="go-btn">Go</button>
     </div>
 
+    <!-- ===== SHORTCUTS ROW ===== -->
     <div class="shortcuts-row">
         <div class="shortcut" data-url="https://google.com">Google</div>
         <div class="shortcut" data-url="https://github.com">GitHub</div>
         <div class="shortcut" data-url="https://duckduckgo.com">DuckDuckGo</div>
         <div class="shortcut" data-url="https://wikipedia.org">Wikipedia</div>
+        <div class="shortcut" data-url="https://proton.me">Proton</div>
     </div>
 
+    <!-- ===== CONTENT AREA ===== -->
     <div id="content-area">
         <div id="empty-state" class="visible">
             <span>🌐</span>
@@ -325,7 +409,7 @@
     </div>
 </div>
 
-<div class="footer-note">Proton Browser — Built with Electron</div>
+<div class="footer-note"><span class="brand">Proton</span> Browser — Built with Electron</div>
 
 <script src="renderer.js"></script>
 </body>
