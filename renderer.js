@@ -1,10 +1,8 @@
 console.log('🚀 Renderer script loaded');
 
-// ===== STATE =====
 let tabs = [];
 let activeTabId = null;
 
-// ===== DOM REFS =====
 const tabBar = document.getElementById('tab-bar');
 const emptyState = document.getElementById('empty-state');
 const urlBar = document.getElementById('url-bar');
@@ -14,7 +12,6 @@ const forwardBtn = document.getElementById('forward-btn');
 const reloadBtn = document.getElementById('reload-btn');
 const newTabBtn = document.getElementById('new-tab-btn');
 
-// ===== CHECK ELECTRON API =====
 if (typeof window.electronAPI === 'undefined') {
   console.error('❌ electronAPI is undefined!');
   document.body.innerHTML = `
@@ -22,7 +19,6 @@ if (typeof window.electronAPI === 'undefined') {
       <div>
         <h2>⚠️ Error: electronAPI not available</h2>
         <p>Preload script may not be loading correctly.</p>
-        <p style="font-size:12px;color:#999;">Check main.js webPreferences preload path</p>
       </div>
     </div>
   `;
@@ -30,7 +26,6 @@ if (typeof window.electronAPI === 'undefined') {
   console.log('✅ electronAPI available');
 }
 
-// ===== RENDER FUNCTION =====
 function renderTabs(tabData) {
   console.log('📋 Rendering tabs:', tabData);
   tabs = tabData || [];
@@ -42,63 +37,51 @@ function renderTabs(tabData) {
     urlBar.value = active.url && active.url !== 'about:blank' ? active.url : '';
   }
   
-  // Update empty state
   if (tabs.length === 0) {
     emptyState.classList.add('visible');
   } else {
     emptyState.classList.remove('visible');
   }
   
-  // Rebuild tab bar (keep new tab button)
   const newTabBtn = document.getElementById('new-tab-btn');
   tabBar.innerHTML = '';
   tabBar.appendChild(newTabBtn);
   
-  // Render each tab
   tabs.forEach(tab => {
     const tabEl = document.createElement('button');
     tabEl.className = `tab ${tab.isActive ? 'active' : ''}`;
     tabEl.dataset.id = tab.id;
     
-    // Loading spinner
     if (tab.isLoading) {
       const spinner = document.createElement('span');
       spinner.className = 'tab-loading';
       tabEl.appendChild(spinner);
     }
     
-    // Title
     const title = document.createElement('span');
     title.className = 'tab-title';
     title.textContent = tab.title || 'New Tab';
     tabEl.appendChild(title);
     
-    // Close button with DIRECT event binding
     const close = document.createElement('span');
     close.className = 'tab-close';
     close.textContent = '✕';
     close.addEventListener('click', function(e) {
       e.stopPropagation();
       console.log('🗑️ Closing tab:', tab.id);
-      if (window.electronAPI) {
-        window.electronAPI.closeTab(tab.id);
-      }
+      if (window.electronAPI) window.electronAPI.closeTab(tab.id);
     });
     tabEl.appendChild(close);
     
-    // Tab click with DIRECT event binding
     tabEl.addEventListener('click', function() {
       console.log('🔄 Switching to tab:', tab.id);
-      if (window.electronAPI) {
-        window.electronAPI.switchTab(tab.id);
-      }
+      if (window.electronAPI) window.electronAPI.switchTab(tab.id);
     });
     
     tabBar.insertBefore(tabEl, newTabBtn);
   });
 }
 
-// ===== NAVIGATION FUNCTIONS =====
 function navigate() {
   const url = urlBar.value.trim();
   if (!url) {
@@ -109,32 +92,36 @@ function navigate() {
     console.log('❌ No active tab');
     return;
   }
-  console.log('🌐 Navigating to:', url);
+  console.log('🌐 Navigating to:', url, 'in tab:', activeTabId);
   if (window.electronAPI) {
+    // CRITICAL: This calls navigateTo() in main.js
     window.electronAPI.navigate(activeTabId, url);
   }
 }
 
 function goBack() {
-  if (!activeTabId) return;
-  console.log('⬅️ Going back');
-  if (window.electronAPI) window.electronAPI.goBack(activeTabId);
+  if (activeTabId && window.electronAPI) {
+    console.log('⬅️ Going back');
+    window.electronAPI.goBack(activeTabId);
+  }
 }
 
 function goForward() {
-  if (!activeTabId) return;
-  console.log('➡️ Going forward');
-  if (window.electronAPI) window.electronAPI.goForward(activeTabId);
+  if (activeTabId && window.electronAPI) {
+    console.log('➡️ Going forward');
+    window.electronAPI.goForward(activeTabId);
+  }
 }
 
 function reload() {
-  if (!activeTabId) return;
-  console.log('🔄 Reloading');
-  if (window.electronAPI) window.electronAPI.reload(activeTabId);
+  if (activeTabId && window.electronAPI) {
+    console.log('🔄 Reloading');
+    window.electronAPI.reload(activeTabId);
+  }
 }
 
 function addTab() {
-  console.log('➕ Creating new tab');
+  console.log('➕ Creating new tab from UI');
   if (window.electronAPI) window.electronAPI.createTab();
 }
 
@@ -260,6 +247,5 @@ if (window.electronAPI) {
   });
 }
 
-// ===== INITIAL STATE =====
 console.log('✅ Proton Browser ready!');
 urlBar.focus();
